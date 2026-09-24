@@ -31,6 +31,12 @@ pure-noise output, and measured production performance.
 > (sampling effectively never progresses). The kijai WanVideoWrapper route is the
 > working path.
 
+## Quick start
+
+1. Download the four model files → [docs/model-list.md](docs/model-list.md)
+2. Skim the pitfalls (especially #1, the text encoder) → [docs/pitfalls.md](docs/pitfalls.md)
+3. Import a workflow from `workflows/` into ComfyUI and run
+
 ## Verified model combination
 
 All downloads work from ModelScope mirrors (HF unreachable in some regions). Exact
@@ -43,18 +49,19 @@ commands in [docs/model-list.md](docs/model-list.md).
 | VAE | `wan_2.1_vae.safetensors` (Comfy-Org repackaged) | 16-channel. The `wan2.2_vae` is 48-ch for the 5B TI2V model only |
 | Speed LoRA | `wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors` | strength 1.0 |
 
-## Production configuration
+## Workflows
 
-**Draft / batch (verified):**
+| File | Purpose | Config |
+|---|---|---|
+| `workflows/wan22_t2v_14b_draft_6step_lightx2v_gfx1151.json` | Draft / batch production | lightx2v LoRA, **6 steps, cfg 1.0, euler** |
+| `workflows/wan22_t2v_14b_final_20step_gfx1151.json` | Final quality | no LoRA, **20 steps, cfg 3.0, euler** |
 
-- Model Loader: KJ fp8_scaled HIGH model, `base_precision: bf16`, `quantization: disabled`,
-  `load_device: main_device`, attention `sdpa`
-- Text: wrapper-native path — *WanVideo T5 Text Encoder Loader* (bf16 umt5) → *WanVideo TextEncode*
-- LoRA: lightx2v 4-steps high-noise, strength 1.0
-- Sampler: **6 steps, cfg 1.0, euler, shift 5.0**
-- Output tested: 832×480, 89 frames (5.5 s @ 16 fps)
+Both use: KJ fp8_scaled HIGH model (`base_precision: bf16`, `main_device`, sdpa),
+wrapper-native T5 chain (bf16 umt5), `wan_2.1_vae` (bf16), Enhance-A-Video weight 2.0,
+832×480 / 89 frames (5.5 s @ 15–16 fps).
 
-**Final quality (verified):** same as above, no LoRA, **20 steps, cfg 3.0**.
+The bypassed (purple) native-CLIP group in these workflows is kept **only** as a
+warning exhibit — it silently produces pure noise on this platform. Do not enable it.
 
 ## Measured performance (80 W mode, GPU ~78 °C sustained)
 
@@ -76,7 +83,6 @@ Notes:
 
 - [docs/pitfalls.md](docs/pitfalls.md) — everything that silently breaks and how to diagnose it
 - [docs/model-list.md](docs/model-list.md) — exact download commands (ModelScope + HF)
-- `workflows/` — ComfyUI workflow JSONs (coming soon)
 
 ## License
 
