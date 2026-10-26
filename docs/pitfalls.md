@@ -89,10 +89,42 @@ With the official Comfy-Org weights and native nodes, sampling never progressed 
 usable rate on gfx1151/ROCm. The WanVideoWrapper path works end to end. If you test
 native nodes again on a newer ROCm/PyTorch, use a tiny job first.
 
+## 11. Toggling LoRA bypass on a live process can crash the interpreter
+
+After a run with the lightx2v LoRA active, bypassing the LoRA node (Ctrl+B) and
+queueing again triggered `Fatal Python error: Aborted` during weight re-patching
+(transformer load stuck at ~1%, native abort inside torch while ComfyUI was
+formatting the error). After a process restart, the identical job ran clean.
+
+**Rule:** after changing LoRA state / steps / cfg, restart the ComfyUI process and
+run the new configuration as the first job. Don't hot-switch.
+
+## 12. 4-step distill LoRA has weak temporal consistency (it's not you)
+
+At 4 steps / cfg 1.0 with the lightx2v LoRA: rigid outlines (bearing rings)
+micro-wobble, busy backgrounds drift, and prompted actions collapse into
+near-static poses. The same prompt and seed at 12 steps / cfg 3.0 / bare model is
+dramatically more stable and more animated. Use 4-step only as a composition
+preview; see `docs/grading-and-prompts.md`.
+
+## 13. Generated text (especially digits) is confidently wrong
+
+An engraved nameplate prompt produced a perfect "PRECISION" but a corrupt glyph
+for the last digit of "2026" — stable across every frame, i.e. a semantic error,
+not jitter. Never ship generated text; overlay all text/digits in post.
+
+## 14. Repetition sets in beyond (and even within) the training length
+
+- At 161 frames (2× the 81-frame training length), the back half of the clip
+  near-duplicates frame content (RoPE re-extension does not create new content).
+- Even at 81 frames, infinite-motion content (pouring coolant) fell into a
+  ~15-frame loop in the final third. Trim such clips to their first ~50–60
+  frames in editing.
+
 ## Quick smoke-test protocol
 
 Whenever you change anything (model file, precision, scheduler, text path):
 
-1. 512×512, 17 frames, seed fixed, same prompt
-2. 6 steps + LoRA ≈ 1 min, or 20 steps bare ≈ 4 min
+1. 512×512 or 832×480, 17 frames, seed fixed, same prompt
+2. 4 steps + LoRA ≈ 1 min
 3. Only trust the decoded video, never the progress bar
