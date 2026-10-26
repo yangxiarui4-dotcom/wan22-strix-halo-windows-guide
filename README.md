@@ -36,6 +36,7 @@ pure-noise output, and measured production performance.
 1. Download the four model files → [docs/model-list.md](docs/model-list.md)
 2. Skim the pitfalls (especially #1, the text encoder) → [docs/pitfalls.md](docs/pitfalls.md)
 3. Import a workflow from `workflows/` into ComfyUI and run
+4. Before producing anything, read the two-tier grading rules → [docs/grading-and-prompts.md](docs/grading-and-prompts.md)
 
 ## Verified model combination
 
@@ -53,12 +54,17 @@ commands in [docs/model-list.md](docs/model-list.md).
 
 | File | Purpose | Config |
 |---|---|---|
-| `workflows/wan22_t2v_14b_draft_6step_lightx2v_gfx1151.json` | Draft / batch production | lightx2v LoRA, **6 steps, cfg 1.0, euler** |
+| `workflows/wan22_t2v_14b_draft_4step_lightx2v_gfx1151.json` | Draft / composition preview | lightx2v LoRA, **4 steps, cfg 1.0, euler** |
 | `workflows/wan22_t2v_14b_final_20step_gfx1151.json` | Final quality | no LoRA, **20 steps, cfg 3.0, euler** |
 
 Both use: KJ fp8_scaled HIGH model (`base_precision: bf16`, `main_device`, sdpa),
 wrapper-native T5 chain (bf16 umt5), `wan_2.1_vae` (bf16), Enhance-A-Video weight 2.0,
-832×480 / 89 frames (5.5 s @ 15–16 fps).
+832×480 / 81 frames (5.4 s @ 15 fps).
+
+In practice we run **12 steps** (not 20) as the final tier: a controlled comparison
+showed 12 steps already fixes the 4-step temporal jitter, at ~60% of the 20-step cost.
+See [docs/grading-and-prompts.md](docs/grading-and-prompts.md) for the two-tier
+draft/final discipline — the 4-step tier is a preview only, never a deliverable.
 
 The bypassed (purple) native-CLIP group in these workflows is kept **only** as a
 warning exhibit — it silently produces pure noise on this platform. Do not enable it.
@@ -67,13 +73,15 @@ warning exhibit — it silently produces pure noise on this platform. Do not ena
 
 | Workload | Speed | Total time | Peak VRAM |
 |---|---|---|---|
-| 512×512 / 17 frames, 6 steps + LoRA (cfg 1.0) | 8.24 s/it | **58 s** | 16.4 GB |
-| 832×480 / 89 frames, 6 steps + LoRA (cfg 1.0) | 396.4 s/it | **40 min 16 s** | 21.4 GB |
-| 832×480 / 81 frames, 20 steps bare (cfg 3.0) | ~640 s/it | ~3.5 h | ~56 GB |
+| 832×480 / 17 frames, 4 steps + LoRA (cfg 1.0) | 14.0 s/it | **103 s** | 16.4 GB |
+| 832×480 / 89 frames, 4 steps + LoRA (cfg 1.0) | 426 s/it | **~29 min** | ~21 GB |
+| 512×512 / 161 frames, 12 steps bare (cfg 3.0) | 1144 s/it | **~3.8 h** | — |
 
 Notes:
 - The fp8 (emulated) KJ weights are **~40% faster** than bf16/fp16 weights here —
   unified memory makes this workload bandwidth-bound, and fp8 halves weight traffic.
+- Attention cost scales super-linearly with frame count: 17 frames is ~30× cheaper
+  per step than 89. Use short clips for prompt iteration.
 - 80 W is the sweet spot; the 120 W chassis mode is expected to gain little since the
   bottleneck is not the power wall.
 - Running two ComfyUI instances in parallel is unlikely to scale: both share the same
@@ -83,6 +91,7 @@ Notes:
 
 - [docs/pitfalls.md](docs/pitfalls.md) — everything that silently breaks and how to diagnose it
 - [docs/model-list.md](docs/model-list.md) — exact download commands (ModelScope + HF)
+- [docs/grading-and-prompts.md](docs/grading-and-prompts.md) — test-battery verdicts, two-tier grading standard, prompt guidelines
 
 ## License
 
